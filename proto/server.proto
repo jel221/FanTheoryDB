@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option go_package = "src/pb";
+
+service TheoryDB {
+  rpc PutTheory(PutTheoryRequest) returns (PutTheoryReply) {}
+  rpc GetTheory(GetTheoryRequest) returns (GetTheoryReply) {}
+}
+
+message Theory {
+  string title = 1;
+  string detail = 2;
+}
+
+message PutTheoryRequest {
+    string title = 1;
+    string detail = 2;
+}
+
+message PutTheoryReply {
+    bool success = 1;
+    string error = 2;
+}
+
+message GetTheoryRequest {
+    string title = 1;
+    repeated string characters = 2;
+    int32 type = 3;
+}
+
+message GetTheoryReply {
+    repeated Theory theories = 1;
+    bool success = 2;
+    string error = 3;
+}
