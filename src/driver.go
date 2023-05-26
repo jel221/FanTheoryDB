@@ -2,10 +2,12 @@ package main
 
 import (
 	pb "github.com/jel221/FanTheoryDB/src/pb"
+	"github.com/jel221/FanTheoryDB/src/driver.go"
 	"context"
 	"log"
 	"net"
 	"time"
+    "os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -16,6 +18,7 @@ import (
 
 type server struct {
 	pb.UnimplementedTheoryDBServer
+	coll *mongo.Collection
 }
 
 func (s *server) GetTheory(ctx context.Context, in *pb.GetTheoryRequest) (*pb.GetTheoryReply, error) {
@@ -26,6 +29,7 @@ func (s *server) GetTheory(ctx context.Context, in *pb.GetTheoryRequest) (*pb.Ge
 
 func (s *server) PutTheory(ctx context.Context, in *pb.PutTheoryRequest) (*pb.PutTheoryReply, error) {
 	log.Printf("Received request: %v", in.ProtoReflect().Descriptor().FullName())
+	
 	var err error
 	if err == nil {
 		return &pb.PutTheoryReply{
@@ -46,18 +50,25 @@ func main() {
 		panic(err)
 	}
 
-	s := grpc.NewServer()
-	reflection.Register(s)
-	pb.RegisterTheoryDBServer(s, &server{})
-
+	/* Establish connection to DB server */
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("")) // Removed
+	cred, err := os.ReadFile("/tmp/dat")
 	if err != nil {
 		panic(err)
 	}
-	client.Database("TestCluster").Collection("ft")
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(string(cred)))
+	if err != nil {
+		panic(err)
+	}
+
+	collection := client.Database("TestDB").Collection("Theory")
+
+	s := grpc.NewServer()
+	reflection.Register(s)
+	pb.RegisterTheoryDBServer(s, &server{coll: collection})
 
 	if err := s.Serve(listener); err != nil {
 		log.Fatalf("failed to serve: %v", err)
